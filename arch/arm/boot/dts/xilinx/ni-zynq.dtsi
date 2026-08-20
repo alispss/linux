@@ -114,6 +114,20 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
+
+		/*
+		 * NI custom driver providing /dev/fpgaperipheral, used by
+		 * atomicrioddk (getAutoFpgaPeripheralDisabler) to coordinate
+		 * disabling the fabric ethernet/serial drivers around FPGA
+		 * reprogramming (see drivers/misc/fpgaperipheral.c and its
+		 * notifier consumer in drivers/net/ethernet/cadence/macb_main.c).
+		 * This is unrelated to the generic devcfg/fpga_manager binding
+		 * below, which we disable to avoid an MMIO reg overlap.
+		 */
+		fpgaperipheral@f8007000 {
+			compatible = "fpgaperipheral";
+			reg = <0xf8007000 0x100>;
+		};
 	};
 };
 
@@ -171,6 +185,17 @@
 	prefetch-instr = <1>;
 	arm,dynamic-clock-gating = <0>;
 	arm,standby-mode = <0>;
+};
+
+/*
+ * The generic Xilinx FPGA-manager binding (xlnx,zynq-devcfg-1.0) claims
+ * the same devcfg@f8007000 register range as our custom fpgaperipheral
+ * node above. Nothing in this driver stack uses the mainline
+ * fpga_manager/fpga-region sysfs API, so disable it to avoid a
+ * request_mem_region() conflict between the two drivers.
+ */
+&devcfg {
+	status = "disabled";
 };
 
 /*
